@@ -1,5 +1,52 @@
 import streamlit as st
 import pandas as pd
+import matplotlib.pyplot as plt
+from matplotlib.patches import Circle, Rectangle, Arc
+
+# Función para dibujar la cancha de fútbol
+def draw_pitch(ax=None):
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(10, 7))
+
+    # Pitch Outline & Centre Line
+    plt.plot([0, 0, 100, 100, 0], [0, 100, 100, 0, 0], color="black")
+
+    # Left Penalty Area
+    plt.plot([0, 17, 17, 0], [30, 30, 70, 70], color="black")
+
+    # Right Penalty Area
+    plt.plot([100, 83, 83, 100], [30, 30, 70, 70], color="black")
+
+    # Left 6-yard Box
+    plt.plot([0, 6, 6, 0], [44, 44, 56, 56], color="black")
+
+    # Right 6-yard Box
+    plt.plot([100, 94, 94, 100], [44, 44, 56, 56], color="black")
+
+    # Prepare Circles; 10 yard circle at centre
+    centreCircle = plt.Circle((50, 50), 8, color="black", fill=False)
+    centreSpot = plt.Circle((50, 50), 0.8, color="black")
+    leftPenSpot = plt.Circle((11, 50), 0.8, color="black")
+    rightPenSpot = plt.Circle((89, 50), 0.8, color="black")
+
+    # Draw Circles
+    ax.add_patch(centreCircle)
+    ax.add_patch(centreSpot)
+    ax.add_patch(leftPenSpot)
+    ax.add_patch(rightPenSpot)
+
+    # Prepare Arcs
+    leftArc = Arc((11, 50), height=16.2, width=16.2, angle=0, theta1=308, theta2=52, color="black")
+    rightArc = Arc((89, 50), height=16.2, width=16.2, angle=0, theta1=128, theta2=232, color="black")
+
+    # Draw Arcs
+    ax.add_patch(leftArc)
+    ax.add_patch(rightArc)
+    
+    # Tidy Axes
+    plt.axis('off')
+
+    return ax
 
 # Cargar los datos de CSV
 file_path = 'Base_Anonimizada.csv'
@@ -27,24 +74,50 @@ if not df.empty:
     st.write(f"**Partidos Jugados:** {jugador_info['Minutos'] // 90}")
     st.write(f"**Posición Habitual:** {jugador_info['Posición Habitual']}")
 
-    # Seleccionar la categoría del partido y la posición del jugador
-    categoria = st.selectbox('Selecciona la categoría del partido:', ['Amistoso', 'Competitivo', 'Importante'])
-    posicion = st.selectbox('Selecciona la posición en la que jugará:', ['Portero', 'Defensa', 'Centrocampista', 'Delantero'])
+    # Seleccionar la categoría del partido de la columna
+    categorias = df['Categoria de Partido'].unique()
+    categoria = st.selectbox('Selecciona la categoría del partido:', categorias)
 
     # Función para el modelo predictivo (placeholder)
-    def modelo_predictivo(categoria, posicion, jugador_info):
+    def modelo_predictivo(categoria, jugador_info):
         # Aquí iría el código de tu modelo predictivo
         return {'probabilidad_exito': 0.85}
 
-    # Ejecutar el modelo predictivo
-    resultado = modelo_predictivo(categoria, posicion, jugador_info)
+    # Inicializar lista de jugadores en el campo
+    if 'jugadores_campo' not in st.session_state:
+        st.session_state.jugadores_campo = []
 
-    # Mostrar los resultados
-    st.write("**Resultados del Modelo Predictivo:**")
-    st.write(f"Probabilidad de éxito: {resultado['probabilidad_exito']*100}%")
+    # Botón para predecir y agregar jugador
+    if st.button('Predecir y Agregar al Campo'):
+        resultado = modelo_predictivo(categoria, jugador_info)
+        st.session_state.jugadores_campo.append((jugador_info['Posición Habitual'], jugador_info['Jugador anonimizado']))
+        st.write(f"Probabilidad de éxito: {resultado['probabilidad_exito']*100}%")
 
-    # Visualizar un campo de juego (placeholder)
+    # Mostrar la lista de jugadores en el campo
+    st.write("**Jugadores en el campo:**")
+    for pos, j in st.session_state.jugadores_campo:
+        st.write(f"{pos}: Jugador {j}")
+
+    # Visualizar un campo de juego con los jugadores agregados
     st.write("**Visualización del campo de juego:**")
-    st.image("https://upload.wikimedia.org/wikipedia/commons/3/39/Football_pitch.svg", width=600)
+    fig, ax = plt.subplots(figsize=(10, 7))
+    ax = draw_pitch(ax)
+    
+    # Posiciones aproximadas para visualización
+    posiciones = {
+        'Portero': (10, 50),
+        'Defensa': (30, 50),
+        'Lateral / Volante': (30, 30),
+        'Volante / Extremo': (50, 50),
+        'Centrocampista': (50, 30),
+        'Delantero': (70, 50)
+    }
+
+    for pos, j in st.session_state.jugadores_campo:
+        if pos in posiciones:
+            x, y = posiciones[pos]
+            ax.text(x, y, f'{j}', fontsize=12, ha='center', va='center', bbox=dict(facecolor='red', alpha=0.5))
+
+    st.pyplot(fig)
 else:
     st.write("No se pudieron cargar los datos.")
