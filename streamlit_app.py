@@ -1,7 +1,9 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle, Rectangle, Arc
+import xgboost as xgb
 
 # Función para dibujar la cancha de fútbol
 def draw_pitch(ax=None):
@@ -49,7 +51,7 @@ def draw_pitch(ax=None):
     return ax
 
 # Cargar los datos de CSV
-file_path = 'Base_Anonimizada.csv'
+file_path = '/mnt/data/Base_Anonimizada.csv'
 
 try:
     df = pd.read_csv(file_path, delimiter=';', encoding='utf-8')
@@ -58,8 +60,28 @@ except Exception as e:
     st.write(f"Error al leer el archivo: {e}")
     df = pd.DataFrame()  # Crear un dataframe vacío en caso de error
 
-# Comprobar que el dataframe no está vacío
-if not df.empty:
+# Cargar los modelos XGBoost
+modelos = {}
+targets = [
+    'minutos', 'avg_dist_sess_m', 'zona_4_19.9_25.1_kmh',
+    'zona_5_mas_25.1_kmh', 'num_aceleraciones_intensas',
+    'num_desaceleraciones_intensas', 'num_acel_desintensas',
+    'num_sprints_total', 'prom_esfuerzos_repetidos', 'max_vel_kmh'
+]
+
+for target in targets:
+    modelo_path = f'modelo_xgboost_{target}.json'
+    try:
+        modelo = xgb.XGBRegressor()
+        modelo.load_model(modelo_path)
+        modelos[target] = modelo
+        st.write(f"Modelo XGBoost para {target} cargado correctamente.")
+    except Exception as e:
+        st.write(f"Error al cargar el modelo XGBoost para {target}: {e}")
+        modelos[target] = None
+
+# Comprobar que el dataframe no está vacío y los modelos están cargados
+if not df.empty and all(modelos.values()):
     # Crear un selector de jugador
     jugadores = df['Jugador anonimizado'].unique()
     jugador_seleccionado = st.selectbox('Selecciona un jugador:', jugadores)
@@ -78,10 +100,35 @@ if not df.empty:
     categorias = df['Categoria de Partido'].unique()
     categoria = st.selectbox('Selecciona la categoría del partido:', categorias)
 
-    # Función para el modelo predictivo (placeholder)
-    def modelo_predictivo(categoria, jugador_info):
-        # Aquí iría el código de tu modelo predictivo
-        return {'probabilidad_exito': 0.85}
+    # Input para el umbral
+    umbral = st.number_input('Umbral', min_value=0.0, max_value=1.0, value=0.5)
+
+    # Función para preparar los datos y hacer la predicción
+    def preparar_datos_y_predecir(jugador_info, categoria, umbral, modelos):
+        # Crear un DataFrame con la nueva fila
+        nueva_fila = pd.DataFrame({
+            'categoria_partido': [categoria],
+            'Altura': [jugador_info['Altura']],
+            'Peso': [jugador_info['Peso']],
+            'Gol?': [jugador_info['Gol?']],
+            'Asistencia?': [jugador_info['Asistencia?']],
+            'Minutos': [jugador_info['Minutos']],
+            'Umbral': [umbral]
+        })
+        
+        # Asegurar que las columnas estén en el mismo orden que las usadas para entrenar el modelo
+        nueva_fila = pd.get_dummies(nueva_fila, columns=['categoria_partido'], drop_first=True)
+        resultados = {}
+        
+        for target in modelos:
+            modelo = modelos[target]
+            if modelo:
+                # Asegurar que todas las características necesarias están presentes
+                dmatrix = xgb.DMatrix(nueva_fila)
+                prediccion = modelo.predict(dmatrix)
+                resultados[target] = prediccion[0]
+        
+        return resultados
 
     # Inicializar lista de jugadores en el campo
     if 'jugadores_campo' not in st.session_state:
@@ -89,9 +136,11 @@ if not df.empty:
 
     # Botón para predecir y agregar jugador
     if st.button('Predecir y Agregar al Campo'):
-        resultado = modelo_predictivo(categoria, jugador_info)
-        st.session_state.jugadores_campo.append((jugador_info['Posición Habitual'], jugador_info['Jugador anonimizado']))
-        st.write(f"Probabilidad de éxito: {resultado['probabilidad_exito']*100}%")
+        resultados = preparar_datos_y_predecir(jugador_info, categoria, umbral, modelos)
+        st.write(f"Resultados de predicción: {resultados}")
+        if resultados['minutos'] >= umbral:
+            st.session_state.jugadores_campo.append((jugador_info['Posición Habitual'], jugador_info['Jugador anonimizado']))
+            st.write("Jugador agregado al campo.")
 
     # Mostrar la lista de jugadores en el campo
     st.write("**Jugadores en el campo:**")
@@ -120,4 +169,4 @@ if not df.empty:
 
     st.pyplot(fig)
 else:
-    st.write("No se pudieron cargar los datos.")
+    st.write("No se pudieron cargar los datos o los modelos.")
