@@ -12,7 +12,7 @@ st.set_page_config(page_title='ML Model Building', page_icon='🤖')
 st.title('🤖 Modelo Predictivo para Cansancio - Analitica del Deporte')
 
 # Cargar los datos de Excel
-df = pd.read_excel('Base_Anonimizada.xlsx')
+df = pd.read_excel('/mnt/data/Base_Anonimizada.xlsx')
 
 # Crear un selector de jugador
 jugadores = df['Jugador anonimizado'].unique()
