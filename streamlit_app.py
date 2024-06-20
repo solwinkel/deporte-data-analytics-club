@@ -63,7 +63,7 @@ except Exception as e:
 # Cargar los modelos XGBoost
 modelos = {}
 targets = [
-    'minutos', 'avg_dist_sess_m', 'zona_4_19.9_25.1_kmh',
+    'avg_dist_sess_m', 'zona_4_19.9_25.1_kmh',
     'zona_5_mas_25.1_kmh', 'num_aceleraciones_intensas',
     'num_desaceleraciones_intensas', 'num_acel_desintensas',
     'num_sprints_total', 'prom_esfuerzos_repetidos', 'max_vel_kmh'
