@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 
 # Cargar los datos de CSV
-file_path = '/mnt/data/Base_Anonimizada.csv'
+file_path = 'Base_Anonimizada.csv'
 
 try:
     df = pd.read_csv(file_path, delimiter=';', encoding='utf-8')
