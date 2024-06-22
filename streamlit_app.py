@@ -60,15 +60,15 @@ best_params = {
 }
 
 # Entrenar modelos y guardarlos
-for target in targets:
-    lower_limit, upper_limit = targets[target]
-    features = [col for col in train_df.columns if col != target and col not in targets]
+# for target in targets:
+#     lower_limit, upper_limit = targets[target]
+#     features = [col for col in train_df.columns if col != target and col not in targets]
 
-    X_train = train_df[features]
-    y_train = train_df[target]
-    final_model = XGBRegressor(**best_params, random_state=42)
-    final_model.fit(X_train, y_train)
-    final_model.save_model(f'modelo_xgboost_{target}.json')
+#     X_train = train_df[features]
+#     y_train = train_df[target]
+#     final_model = XGBRegressor(**best_params, random_state=42)
+#     final_model.fit(X_train, y_train)
+#     final_model.save_model(f'modelo_xgboost_{target}.json')
 
 # Interfaz de Streamlit
 st.title('Predicciones de XGBoost para jugadores')
