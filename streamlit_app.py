@@ -4,6 +4,7 @@ import numpy as np
 import xgboost as xgb
 from xgboost import XGBRegressor
 import os
+from scipy import stats
 
 
 # Cargar datos
@@ -83,6 +84,18 @@ tipo_partido_seleccionado = st.selectbox('Selecciona un tipo de partido', tipos_
 # Filtrar datos del jugador seleccionado
 jugador_data = test_df[test_df['jugador_anonimizado'] == jugador_seleccionado].copy()
 
+# Obtener y mostrar información adicional del jugador
+info_jugador = train_df[train_df['jugador_anonimizado'] == jugador_seleccionado].iloc[0]
+#st.write(f"Posición: {info_jugador['posicion_habitual']}")
+st.write(f"Edad: {info_jugador['edad']}")
+st.write(f"Altura: {info_jugador['altura']} cm")
+st.write(f"Peso: {info_jugador['peso']} kg")
+
+# Calcular la cantidad de partidos en los que ha participado
+num_partidos = len(train_df[train_df['jugador_anonimizado'] == jugador_seleccionado]) + \
+               len(test_df[test_df['jugador_anonimizado'] == jugador_seleccionado])
+st.write(f"Cantidad de partidos en los que ha participado: {num_partidos}")
+
 # Eliminar columnas no necesarias
 jugador_data = jugador_data.drop(columns=['jugador_anonimizado'] + drop_cols + list(targets.keys()), errors='ignore')
 
@@ -100,6 +113,13 @@ for col in missing_cols:
 # Reordenar las columnas de jugador_data para que coincidan con X_train
 jugador_data = jugador_data[X_train.columns]
 
+# Función para calcular el intervalo de confianza del 95%
+def confidence_interval(predictions, confidence=0.95):
+    mean_pred = np.mean(predictions)
+    stderr = stats.sem(predictions)
+    margin = stderr * stats.t.ppf((1 + confidence) / 2., len(predictions) - 1)
+    return mean_pred - margin, mean_pred + margin
+
 # Cargar modelos y hacer predicciones
 predicciones = {}
 for target in targets:
@@ -108,9 +128,12 @@ for target in targets:
     model.load_model(f'modelo_xgboost_{target}.json')
     
     dmatrix = xgb.DMatrix(jugador_data)
-    y_pred = model.predict(dmatrix)
+    y_pred = model.predict(dmatrix, output_margin=True)
     y_pred = np.clip(y_pred, lower_limit, upper_limit)
-    predicciones[target] = y_pred[0]
+    predicciones[target] = {
+        'prediccion': y_pred[0],
+        'intervalo_confianza': confidence_interval(y_pred)
+    }
 
 # Mostrar predicciones
 st.write('Predicciones para el jugador seleccionado y tipo de partido:')

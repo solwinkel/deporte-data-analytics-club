@@ -5,3 +5,4 @@ altair>=4.0
 matplotlib>=3.5
 xgboost 
 openpyxl
+scipy
