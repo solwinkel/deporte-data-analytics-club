@@ -87,10 +87,10 @@ jugador_data = test_df[test_df['jugador_anonimizado'] == jugador_seleccionado].c
 jugador_data = jugador_data.drop(columns=['jugador_anonimizado'] + drop_cols + list(targets.keys()), errors='ignore')
 
 # Agregar la categoría de partido codificada manualmente
-if tipo_partido_seleccionado == 'Importante':
-    jugador_data['categoria_partido_Importante'] = 1
+if tipo_partido_seleccionado == 'Normal':
+    jugador_data['categoria_partido_Normal'] = 1
 else:
-    jugador_data['categoria_partido_Importante'] = 0
+    jugador_data['categoria_partido_Normal'] = 0
 
 # Asegurarse de que las columnas de jugador_data coincidan con las del modelo
 missing_cols = set(X_train.columns) - set(jugador_data.columns)
