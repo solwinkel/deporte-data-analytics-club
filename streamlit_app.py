@@ -2,10 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import xgboost as xgb
-from xgboost import XGBRegressor
-import os
 from scipy import stats
-
 
 # Cargar datos
 train_df = pd.read_excel('train_df.xlsx')
@@ -106,12 +103,12 @@ else:
     jugador_data['categoria_partido_Normal'] = 0
 
 # Asegurarse de que las columnas de jugador_data coincidan con las del modelo
-missing_cols = set(X_train.columns) - set(jugador_data.columns)
+missing_cols = set(train_df.drop(columns=targets.keys()).columns) - set(jugador_data.columns)
 for col in missing_cols:
     jugador_data[col] = 0
 
 # Reordenar las columnas de jugador_data para que coincidan con X_train
-jugador_data = jugador_data[X_train.columns]
+jugador_data = jugador_data[train_df.drop(columns=targets.keys()).columns]
 
 # Función para calcular el intervalo de confianza del 95%
 def confidence_interval(predictions, confidence=0.95):
@@ -120,21 +117,22 @@ def confidence_interval(predictions, confidence=0.95):
     margin = stderr * stats.t.ppf((1 + confidence) / 2., len(predictions) - 1)
     return mean_pred - margin, mean_pred + margin
 
-# Cargar modelos y hacer predicciones
-predicciones = {}
-for target in targets:
-    lower_limit, upper_limit = targets[target]
-    model = xgb.Booster()
-    model.load_model(f'modelo_xgboost_{target}.json')
-    
-    dmatrix = xgb.DMatrix(jugador_data)
-    y_pred = model.predict(dmatrix, output_margin=True)
-    y_pred = np.clip(y_pred, lower_limit, upper_limit)
-    predicciones[target] = {
-        'prediccion': y_pred[0],
-        'intervalo_confianza': confidence_interval(y_pred)
-    }
+# Botón para realizar predicciones
+if st.button('Realizar predicciones'):
+    # Cargar modelos y hacer predicciones
+    predicciones = {}
+    for target in targets:
+        lower_limit, upper_limit = targets[target]
+        model = xgb.Booster()
+        model.load_model(f'modelo_xgboost_{target}.json')
+        
+        dmatrix = xgb.DMatrix(jugador_data)
+        y_pred = model.predict(dmatrix, output_margin=True)
+        y_pred = np.clip(y_pred, lower_limit, upper_limit)
+        predicciones[target] = {
+            'intervalo_confianza': confidence_interval(y_pred)
+        }
 
-# Mostrar predicciones
-st.write('Predicciones para el jugador seleccionado y tipo de partido:')
-st.json(predicciones)
+    # Mostrar predicciones
+    st.write('Intervalos de confianza para el jugador seleccionado y tipo de partido:')
+    st.json(predicciones)
