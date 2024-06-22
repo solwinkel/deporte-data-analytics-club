@@ -6,8 +6,8 @@ from xgboost import XGBRegressor
 import json
 
 # Cargar datos
-train_df = pd.read_excel('/mnt/data/train_df.xlsx')
-test_df = pd.read_excel('/mnt/data/test_df.xlsx')
+train_df = pd.read_excel('train_df.xlsx')
+test_df = pd.read_excel('test_df.xlsx')
 
 # Definir targets y otros parámetros
 targets = {
