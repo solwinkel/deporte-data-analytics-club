@@ -5,6 +5,9 @@ import xgboost as xgb
 from xgboost import XGBRegressor
 import json
 
+import os
+os.system('pip install openpyxl')
+
 # Cargar datos
 train_df = pd.read_excel('train_df.xlsx')
 test_df = pd.read_excel('test_df.xlsx')
