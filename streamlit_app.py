@@ -3,10 +3,8 @@ import pandas as pd
 import numpy as np
 import xgboost as xgb
 from xgboost import XGBRegressor
-import json
-
 import os
-os.system('pip install openpyxl')
+
 
 # Cargar datos
 train_df = pd.read_excel('train_df.xlsx')
@@ -33,12 +31,25 @@ categorical_cols = [
 ]
 
 drop_cols = ['fecha', 'num_fecha_torneo', 'posicion', 'rival', 'tiempo']
+
+# Eliminar columnas no necesarias
 train_df = train_df.drop(columns=drop_cols, errors='ignore')
 test_df = test_df.drop(columns=drop_cols, errors='ignore')
 
+# Realizar codificación one-hot
 train_df = pd.get_dummies(train_df, columns=categorical_cols, drop_first=True)
 test_df = pd.get_dummies(test_df, columns=categorical_cols, drop_first=True)
 
+# Asegurarse de que las columnas en test_df coincidan con las de train_df, sin incluir las columnas de targets
+missing_cols = set(train_df.columns) - set(test_df.columns)
+for col in missing_cols:
+    if col not in targets:
+        test_df[col] = 0
+
+# Reordenar las columnas de test_df para que coincidan con train_df (menos las columnas de targets)
+test_df = test_df[train_df.drop(columns=targets.keys()).columns]
+
+# Entrenar modelos y guardarlos
 best_params = {
     'colsample_bytree': 0.8,
     'learning_rate': 0.1,
@@ -55,9 +66,6 @@ for target in targets:
 
     X_train = train_df[features]
     y_train = train_df[target]
-    X_test = test_df[features]
-    y_test = test_df[target]
-
     final_model = XGBRegressor(**best_params, random_state=42)
     final_model.fit(X_train, y_train)
     final_model.save_model(f'modelo_xgboost_{target}.json')
@@ -66,18 +74,31 @@ for target in targets:
 st.title('Predicciones de XGBoost para jugadores')
 
 # Seleccionar un jugador y tipo de partido
-jugadores = test_df['jugador'].unique()
-tipos_partido = test_df['tipo_partido'].unique()
+jugadores = test_df['jugador_anonimizado'].unique()
+tipos_partido = ['Importante', 'Normal']  # Definimos las categorías directamente
 
 jugador_seleccionado = st.selectbox('Selecciona un jugador', jugadores)
 tipo_partido_seleccionado = st.selectbox('Selecciona un tipo de partido', tipos_partido)
 
 # Filtrar datos del jugador seleccionado
-jugador_data = test_df[(test_df['jugador'] == jugador_seleccionado) & 
-                       (test_df['tipo_partido'] == tipo_partido_seleccionado)]
+jugador_data = test_df[test_df['jugador_anonimizado'] == jugador_seleccionado].copy()
 
 # Eliminar columnas no necesarias
-jugador_data = jugador_data.drop(columns=['jugador', 'tipo_partido'] + drop_cols + list(targets.keys()), errors='ignore')
+jugador_data = jugador_data.drop(columns=['jugador_anonimizado'] + drop_cols + list(targets.keys()), errors='ignore')
+
+# Agregar la categoría de partido codificada manualmente
+if tipo_partido_seleccionado == 'Importante':
+    jugador_data['categoria_partido_Importante'] = 1
+else:
+    jugador_data['categoria_partido_Importante'] = 0
+
+# Asegurarse de que las columnas de jugador_data coincidan con las del modelo
+missing_cols = set(X_train.columns) - set(jugador_data.columns)
+for col in missing_cols:
+    jugador_data[col] = 0
+
+# Reordenar las columnas de jugador_data para que coincidan con X_train
+jugador_data = jugador_data[X_train.columns]
 
 # Cargar modelos y hacer predicciones
 predicciones = {}
