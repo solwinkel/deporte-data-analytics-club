@@ -8,6 +8,9 @@ from scipy import stats
 train_df = pd.read_excel('train_df.xlsx')
 test_df = pd.read_excel('test_df.xlsx')
 
+train_df2 = train_df
+test_df2 = test_df
+
 # Definir targets y otros parámetros
 targets = {
     'minutos': (0, 100),
@@ -93,7 +96,7 @@ st.title('Predicciones de métricas físicas para jugadores 🏋️')
 
 # Seleccionar un jugador y tipo de partido
 jugadores = test_df['jugador_anonimizado'].unique()
-tipos_partido = ['Importante', 'Normal']  # Definimos las categorías directamente
+tipos_partido = ['Importante', 'Normal']  
 
 # Crear columnas para el layout
 col1, col2 = st.columns(2)
@@ -116,11 +119,23 @@ with col2:
     st.write(f"Altura 🧍↕: {info_jugador['altura']} cm")
     st.write(f"Peso ⏲️: {info_jugador['peso']} kg")
 
+    # Extraer la posición habitual del jugador de una de las bases de datos
+    posicion_habitual = train_df2[train_df2['jugador_anonimizado'] == jugador_seleccionado]['posicion_habitual'].iloc[0]
+    st.write(f"Posición habitual 🏅: {posicion_habitual}")
+
     # Calcular la cantidad de partidos en los que ha participado
-    num_partidos = len(train_df[train_df['jugador_anonimizado'] == jugador_seleccionado]) + \
-                   len(test_df[test_df['jugador_anonimizado'] == jugador_seleccionado])
+    num_partidos_train = len(train_df[train_df['jugador_anonimizado'] == jugador_seleccionado])
+    num_partidos_test = len(test_df[test_df['jugador_anonimizado'] == jugador_seleccionado])
+    num_partidos = num_partidos_train + num_partidos_test
     st.write(f"Cantidad de partidos ⚽: {num_partidos}")
+
+    # Calcular la cantidad de partidos en los que jugó más de 55 minutos
+    num_mas_55_train = len(train_df2[(train_df2['jugador_anonimizado'] == jugador_seleccionado) & (train_df2['minutos'] > 50)])
+    num_mas_55_test = len(test_df2[(test_df2['jugador_anonimizado'] == jugador_seleccionado) & (test_df2['minutos'] > 50)])
+    num_mas_55 = num_mas_55_train + num_mas_55_test
+    st.write(f"Cantidad de partidos jugados de titular ⏱️: {num_mas_55}")
     st.markdown('</div>', unsafe_allow_html=True)
+
 
 # Eliminar columnas no necesarias
 jugador_data = jugador_data.drop(columns=['jugador_anonimizado'] + drop_cols + list(targets.keys()), errors='ignore')

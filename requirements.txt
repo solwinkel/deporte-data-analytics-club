@@ -6,3 +6,4 @@ matplotlib>=3.5
 xgboost 
 openpyxl
 scipy
+seaborn
