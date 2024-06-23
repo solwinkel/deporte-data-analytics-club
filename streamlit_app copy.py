@@ -75,20 +75,6 @@ def confidence_interval(predictions, confidence=0.99):
     margin = stderr * stats.t.ppf((1 + confidence) / 2., len(predictions) - 1)
     return mean_pred - margin, mean_pred + margin
 
-# Nombres legibles para los targets
-targets = {
-    'minutos': (0, 100),
-    'avg_dist_sess_m': (0, 12000),
-    'zona_4_19.9_25.1_kmh': (0, 1122),
-    'zona_5_mas_25.1_kmh': (0, 542),
-    'num_aceleraciones_intensas': (0, 120),
-    'num_desaceleraciones_intensas': (0, 140),
-    'num_acel_desintensas': (0, 250),
-    'num_sprints_total': (0, 30),
-    'prom_esfuerzos_repetidos': (0, 30),
-    'max_vel_kmh': (0, 33)
-}
-
 target_names = {
     'minutos': 'Minutos Jugados',
     'avg_dist_sess_m': 'Distancia Promedio (m)',
@@ -96,45 +82,14 @@ target_names = {
     'zona_5_mas_25.1_kmh': 'Zona 5 (>25.1 km/h)',
     'num_aceleraciones_intensas': 'Aceleraciones Intensas',
     'num_desaceleraciones_intensas': 'Desaceleraciones Intensas',
-    'num_acel_desintensas': 'Acel/Desintensas',
+    'num_acel_desintensas': 'Aceleraciones + Desaceleraciones Intensas',
     'num_sprints_total': 'Sprints Totales',
     'prom_esfuerzos_repetidos': 'Esfuerzos Repetidos',
     'max_vel_kmh': 'Velocidad Máxima (km/h)'
 }
 
-# CSS para agregar bordes a las columnas y estilizar la cancha
-st.markdown(
-    """
-    <style>
-    .column {
-        padding: 10px;
-        border: 1px solid #d3d3d3;
-        border-radius: 5px;
-    }
-    .cancha {
-        width: 100%;
-        background-color: #228B22;
-        position: relative;
-        border: 2px solid #fff;
-        border-radius: 10px;
-        margin: auto;
-    }
-    .jugador {
-        width: 50px;
-        height: 50px;
-        background-color: #FFD700;
-        border-radius: 50%;
-        text-align: center;
-        line-height: 50px;
-        position: absolute;
-    }
-    </style>
-    """, 
-    unsafe_allow_html=True
-)
-
 # Interfaz de Streamlit
-st.title('Predicciones de métricas físicas para jugadores')
+st.title('Predicciones de métricas físicas para jugadores 🏋️')
 
 # Seleccionar un jugador y tipo de partido
 jugadores = test_df['jugador_anonimizado'].unique()
@@ -157,47 +112,15 @@ info_jugador = train_df[train_df['jugador_anonimizado'] == jugador_seleccionado]
 
 with col2:
     st.markdown('<div class="column">', unsafe_allow_html=True)
-    st.write(f"Edad: {info_jugador['edad']}")
-    st.write(f"Altura: {info_jugador['altura']} cm")
-    st.write(f"Peso: {info_jugador['peso']} kg")
+    st.write(f"Edad 🎂: {info_jugador['edad']}")
+    st.write(f"Altura 🧍↕: {info_jugador['altura']} cm")
+    st.write(f"Peso ⏲️: {info_jugador['peso']} kg")
 
     # Calcular la cantidad de partidos en los que ha participado
     num_partidos = len(train_df[train_df['jugador_anonimizado'] == jugador_seleccionado]) + \
                    len(test_df[test_df['jugador_anonimizado'] == jugador_seleccionado])
-    st.write(f"Cantidad de partidos en los que ha participado: {num_partidos}")
+    st.write(f"Cantidad de partidos ⚽: {num_partidos}")
     st.markdown('</div>', unsafe_allow_html=True)
-
-# Almacenar el equipo titular
-if 'equipo_titular' not in st.session_state:
-    st.session_state.equipo_titular = []
-
-# Funcionalidad para agregar un jugador al equipo titular
-if st.button('Agregar al equipo'):
-    if len(st.session_state.equipo_titular) < 10:
-        posicion = info_jugador['posicion_habitual']
-        jugador_info = {
-            'jugador': jugador_seleccionado,
-            'posicion': posicion
-        }
-        st.session_state.equipo_titular.append(jugador_info)
-
-# Funcionalidad para eliminar un jugador del equipo titular
-if st.button('Eliminar al equipo'):
-    if st.session_state.equipo_titular:
-        st.session_state.equipo_titular.pop()
-
-# Mostrar la cancha y los jugadores
-st.markdown('<div class="cancha">', unsafe_allow_html=True)
-for jugador in st.session_state.equipo_titular:
-    posicion = jugador['posicion']
-    # Ajustar las posiciones en la cancha (deberías ajustar estos valores según el layout deseado)
-    posicion_x = 50  # Ejemplo de coordenadas X
-    posicion_y = 50  # Ejemplo de coordenadas Y
-    st.markdown(
-        f'<div class="jugador" style="top: {posicion_y}px; left: {posicion_x}px;">{jugador["jugador"]}</div>',
-        unsafe_allow_html=True
-    )
-st.markdown('</div>', unsafe_allow_html=True)
 
 # Eliminar columnas no necesarias
 jugador_data = jugador_data.drop(columns=['jugador_anonimizado'] + drop_cols + list(targets.keys()), errors='ignore')
