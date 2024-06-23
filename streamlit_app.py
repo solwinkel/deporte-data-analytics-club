@@ -110,8 +110,8 @@ for col in missing_cols:
 # Reordenar las columnas de jugador_data para que coincidan con X_train
 jugador_data = jugador_data[train_df.drop(columns=targets.keys()).columns]
 
-# Función para calcular el intervalo de confianza del 95%
-def confidence_interval(predictions, confidence=0.95):
+# Función para calcular el intervalo de confianza del 70%
+def confidence_interval(predictions, confidence=0.70):
     mean_pred = np.mean(predictions)
     stderr = stats.sem(predictions)
     margin = stderr * stats.t.ppf((1 + confidence) / 2., len(predictions) - 1)
