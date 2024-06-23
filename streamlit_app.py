@@ -69,7 +69,7 @@ for target in targets:
 #     final_model.save_model(f'modelo_xgboost_{target}.json')
 
 # Interfaz de Streamlit
-st.title('Predicciones de XGBoost para jugadores')
+st.title('Predicciones de metricas físicas para jugadores')
 
 # Seleccionar un jugador y tipo de partido
 jugadores = test_df['jugador_anonimizado'].unique()
@@ -134,5 +134,5 @@ if st.button('Realizar predicciones'):
         }
 
     # Mostrar predicciones
-    st.write('Intervalos de confianza para el jugador seleccionado y tipo de partido:')
+    st.write('Intervalos para el jugador seleccionado y tipo de partido:')
     st.json(predicciones)
