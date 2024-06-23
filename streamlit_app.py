@@ -129,10 +129,22 @@ if st.button('Realizar predicciones'):
         dmatrix = xgb.DMatrix(jugador_data)
         y_pred = model.predict(dmatrix, output_margin=True)
         y_pred = np.clip(y_pred, lower_limit, upper_limit)
+        interval = confidence_interval(y_pred)
         predicciones[target] = {
-            'intervalo_confianza': confidence_interval(y_pred)
+            'intervalo_confianza': interval
         }
 
     # Mostrar predicciones
-    st.write('Intervalos para el jugador seleccionado y tipo de partido:')
-    st.json(predicciones)
+    st.subheader('Intervalos para el jugador seleccionado y tipo de partido:')
+    
+    for target, resultado in predicciones.items():
+        mean = resultado['predicción_media']
+        ci_lower, ci_upper = resultado['intervalo_confianza']
+        
+        st.markdown(f"### {target.capitalize()}")
+        st.markdown(f"**Intervalo de confianza (99%):** ({ci_lower:.2f}, {ci_upper:.2f})")
+        
+        progress = (mean - lower_limit) / (upper_limit - lower_limit)
+        st.progress(progress)
+    
+    st.write('Predicciones detalladas:', predicciones)
