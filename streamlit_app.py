@@ -71,12 +71,20 @@ for target in targets:
 #     final_model.fit(X_train, y_train)
 #     final_model.save_model(f'modelo_xgboost_{target}.json')
 
-# Función para calcular el intervalo de confianza del 99%
-def confidence_interval(predictions, confidence=0.99):
-    mean_pred = np.mean(predictions)
-    stderr = stats.sem(predictions)
-    margin = stderr * stats.t.ppf((1 + confidence) / 2., len(predictions) - 1)
-    return mean_pred - margin, mean_pred + margin
+def confidence_interval(predictions, confidence=0.99, n_bootstraps=1000):
+    bootstrapped_means = []
+    for _ in range(n_bootstraps):
+        samples = np.random.choice(predictions, size=len(predictions), replace=True)
+        bootstrapped_means.append(np.mean(samples))
+    
+    lower_bound = np.percentile(bootstrapped_means, (1 - confidence) / 2 * 100)
+    upper_bound = np.percentile(bootstrapped_means, (1 + confidence) / 2 * 100)
+    
+    if(round(lower_bound,1) == round(upper_bound,1)):
+        lower_bound = lower_bound - lower_bound * 0.1
+        upper_bound = upper_bound + upper_bound * 0.1
+
+    return lower_bound, upper_bound
 
 target_names = {
     'minutos': 'Minutos Jugados',
@@ -167,11 +175,10 @@ if st.button('Realizar predicciones'):
         y_pred = model.predict(dmatrix, output_margin=True)
         y_pred = np.clip(y_pred, lower_limit, upper_limit)
         intervalo = confidence_interval(y_pred)
-        
         predicciones.append({
             'Métrica': target_names[target],
-            'Límite Inferior': intervalo[0],
-            'Límite Superior': intervalo[1]
+            'Límite Inferior': max(intervalo[0], lower_limit), 
+            'Límite Superior': min(intervalo[1], upper_limit) 
         })
 
     # Convertir lista de predicciones a DataFrame para mostrar como tabla
