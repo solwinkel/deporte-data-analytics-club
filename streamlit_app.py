@@ -4,14 +4,12 @@ import numpy as np
 import xgboost as xgb
 from scipy import stats
 
-# Cargar datos
 train_df = pd.read_excel('train_df.xlsx')
 test_df = pd.read_excel('test_df.xlsx')
 
 train_df2 = train_df
 test_df2 = test_df
 
-# Definir targets y otros parámetros
 targets = {
     'minutos': (0, 100),
     'avg_dist_sess_m': (0, 12000),
@@ -33,24 +31,19 @@ categorical_cols = [
 
 drop_cols = ['fecha', 'num_fecha_torneo', 'posicion', 'rival', 'tiempo']
 
-# Eliminar columnas no necesarias
 train_df = train_df.drop(columns=drop_cols, errors='ignore')
 test_df = test_df.drop(columns=drop_cols, errors='ignore')
 
-# Realizar codificación one-hot
 train_df = pd.get_dummies(train_df, columns=categorical_cols, drop_first=True)
 test_df = pd.get_dummies(test_df, columns=categorical_cols, drop_first=True)
 
-# Asegurarse de que las columnas en test_df coincidan con las de train_df, sin incluir las columnas de targets
 missing_cols = set(train_df.columns) - set(test_df.columns)
 for col in missing_cols:
     if col not in targets:
         test_df[col] = 0
 
-# Reordenar las columnas de test_df para que coincidan con train_df (menos las columnas de targets)
 test_df = test_df[train_df.drop(columns=targets.keys()).columns]
 
-# Entrenar modelos y guardarlos
 best_params = {
     'colsample_bytree': 0.8,
     'learning_rate': 0.1,
@@ -60,7 +53,6 @@ best_params = {
     'subsample': 0.6
 }
 
-# Entrenar modelos y guardarlos
 for target in targets:
     lower_limit, upper_limit = targets[target]
     features = [col for col in train_df.columns if col != target and col not in targets]
@@ -99,14 +91,12 @@ target_names = {
     'max_vel_kmh': 'Velocidad Máxima (km/h)'
 }
 
-# Interfaz de Streamlit
+#armado de la interfaz
 st.title('Predicciones de métricas físicas para jugadores 🏋️')
 
-# Seleccionar un jugador y tipo de partido
 jugadores = test_df['jugador_anonimizado'].unique()
 tipos_partido = ['Importante', 'Normal']  
 
-# Crear columnas para el layout
 col1, col2 = st.columns(2)
 
 with col1:
@@ -115,10 +105,8 @@ with col1:
     tipo_partido_seleccionado = st.selectbox('Selecciona un tipo de partido', tipos_partido)
     st.markdown('</div>', unsafe_allow_html=True)
 
-# Filtrar datos del jugador seleccionado
 jugador_data = test_df[test_df['jugador_anonimizado'] == jugador_seleccionado].copy()
 
-# Obtener y mostrar información adicional del jugador
 info_jugador = train_df[train_df['jugador_anonimizado'] == jugador_seleccionado].iloc[0]
 
 with col2:
@@ -127,17 +115,14 @@ with col2:
     st.write(f"Altura 🧍↕: {info_jugador['altura']} cm")
     st.write(f"Peso ⏲️: {info_jugador['peso']} kg")
 
-    # Extraer la posición habitual del jugador de una de las bases de datos
     posicion_habitual = train_df2[train_df2['jugador_anonimizado'] == jugador_seleccionado]['posicion_habitual'].iloc[0]
     st.write(f"Posición habitual 🏅: {posicion_habitual}")
 
-    # Calcular la cantidad de partidos en los que ha participado
     num_partidos_train = len(train_df[train_df['jugador_anonimizado'] == jugador_seleccionado])
     num_partidos_test = len(test_df[test_df['jugador_anonimizado'] == jugador_seleccionado])
     num_partidos = num_partidos_train + num_partidos_test
     st.write(f"Cantidad de partidos ⚽: {num_partidos}")
 
-    # Calcular la cantidad de partidos en los que jugó más de 55 minutos
     num_mas_55_train = len(train_df2[(train_df2['jugador_anonimizado'] == jugador_seleccionado) & (train_df2['minutos'] > 50)])
     num_mas_55_test = len(test_df2[(test_df2['jugador_anonimizado'] == jugador_seleccionado) & (test_df2['minutos'] > 50)])
     num_mas_55 = num_mas_55_train + num_mas_55_test
@@ -145,24 +130,19 @@ with col2:
     st.markdown('</div>', unsafe_allow_html=True)
 
 
-# Eliminar columnas no necesarias
 jugador_data = jugador_data.drop(columns=['jugador_anonimizado'] + drop_cols + list(targets.keys()), errors='ignore')
 
-# Agregar la categoría de partido codificada manualmente
 if tipo_partido_seleccionado == 'Normal':
     jugador_data['categoria_partido_Normal'] = 1
 else:
     jugador_data['categoria_partido_Normal'] = 0
 
-# Asegurarse de que las columnas de jugador_data coincidan con las del modelo
 missing_cols = set(train_df.drop(columns=targets.keys()).columns) - set(jugador_data.columns)
 for col in missing_cols:
     jugador_data[col] = 0
 
-# Reordenar las columnas de jugador_data para que coincidan con X_train
 jugador_data = jugador_data[train_df.drop(columns=targets.keys()).columns]
 
-# Botón para realizar predicciones
 if st.button('Realizar predicciones'):
     # Cargar modelos y hacer predicciones
     predicciones = []
@@ -181,9 +161,7 @@ if st.button('Realizar predicciones'):
             'Límite Superior': min(intervalo[1], upper_limit) 
         })
 
-    # Convertir lista de predicciones a DataFrame para mostrar como tabla
     predicciones_df = pd.DataFrame(predicciones)
     
-    # Mostrar predicciones como tabla
     st.write('Intervalos para el jugador seleccionado y tipo de partido:')
     st.table(predicciones_df)
